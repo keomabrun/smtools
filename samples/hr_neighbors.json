@@ -1,0 +1,67 @@
+{
+    "hr": {
+        "Neighbors": {
+            "neighbors": [{
+                "neighborFlag": 0,
+                "neighborId": 1,
+                "numTxFailures": 187,
+                "rssi": -85,
+                "numTxPackets": 233,
+                "numRxPackets": 1
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 14,
+                "numTxFailures": 0,
+                "rssi": -56,
+                "numTxPackets": 0,
+                "numRxPackets": 22
+            }, {
+                "neighborFlag": 0,
+                "neighborI     d": 2,
+                "numTxFailures": 138,
+                "rssi": -72,
+                "numTxPackets": 366,
+                "numRxPackets": 91
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 19,
+                "numTxFailures": 0,
+                "rssi": -62,
+                "numTxPackets": 0,
+                "numRxPackets": 24
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 20,
+                "numTxFailures": 0,
+                "rssi": -78,
+                "numTxPackets": 0,
+                "numRxPackets": 2
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 17,
+                "numTxFailures": 0,
+                "rssi": -76,
+                "numTxPackets": 0,
+                "numRxPackets": 3
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 23,
+                "numTxFailures": 0,
+                "rssi": -60,
+                "numTxPackets": 0,
+                "numRxPackets": 3
+            }, {
+                "neighborFlag": 0,
+                "neighborId": 24,
+                "numTxFailures": 0,
+                "rssi": -80,
+                "numTxPackets": 0,
+                "numRxPackets": 12
+            }],
+            "numItems": 8
+        }
+    },
+    "mac": "00-17-0d-00-00-31-c7-b0",
+    "name": "hr",
+    "datetime": "2018-05-28 19:56:14"
+}
