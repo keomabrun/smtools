@@ -5,6 +5,7 @@ import os
 import json
 import time
 from datetime import datetime
+import threading
 
 if __name__ == "__main__":
     here = sys.path[0]
@@ -18,6 +19,8 @@ MANAGER_PORT = "/dev/ttyUSB3"
 LOG_FILE  = "sm.log"
 
 # =========================== main ============================================
+
+lock = threading.RLock()
 
 def main():
     # initialize JsonManager
@@ -42,22 +45,23 @@ def main():
     # run snapshot periodically
     while True:
         jsonManager.snapshot_POST(MANAGER_PORT)
-        time.sleep(60)
+        time.sleep(60*60)
 
 def notif_cb(notifName, notifJson):
-    # add notif name if not present
-    if 'name' not in notifJson:
-        notifJson['name'] = notifName
+    with lock:
+        # add notif name if not present
+        if 'name' not in notifJson:
+            notifJson['name'] = notifName
 
-    # add datetime
-    if 'datetime' not in notifJson:
-        notifJson['datetime'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    else:
-        print "datetime already present"
+        # add datetime
+        if 'datetime' not in notifJson:
+            notifJson['datetime'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            print "datetime already present"
 
-    # write to file
-    with open(LOG_FILE, 'a') as f:
-        f.write(json.dumps(notifJson) + "\n")
+        # write to file
+        with open(LOG_FILE, 'a') as f:
+            f.write(json.dumps(notifJson) + "\n")
 
 if __name__ == "__main__":
     main()
