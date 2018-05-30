@@ -42,9 +42,19 @@ def main():
         time.sleep(1)
     time.sleep(1)
 
-    # run snapshot periodically
+    # run extra commands periodically
     while True:
+        # snapshot
         jsonManager.snapshot_POST(MANAGER_PORT)
+
+        # getTime
+        notifJson = jsonManager.raw_POST(
+            commandArray=["getTime"],
+            fields={},
+            manager=MANAGER_PORT,
+        )
+        notif_cb('getTime', notifJson)
+
         time.sleep(60*60)
 
 def notif_cb(notifName, notifJson):
