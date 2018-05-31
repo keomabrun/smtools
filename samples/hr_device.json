@@ -1,0 +1,71 @@
+{
+    "hr": {
+        "Device": {
+            "batteryVoltage": 3230,
+            "temperature": 24,
+            "numRxLost": 0,
+            "numTxFail": 0,
+            "numMacCrcErr": 28,
+            "charge": 6345,
+            "numNetMicErr": 0,
+            "queueOcc": 81,
+            "numRxOk": 4,
+            "numTxOk": 48,
+            "badLinkSlot": 0,
+            "numMacMicErr": 4,
+            "numMacDropped": 0,
+            "badLinkOffset": 0,
+            "numTxBad": 0,
+            "badLinkFrameId": 0
+        },
+        "Discovered": {
+            "numItems": 8,
+            "discoveredNeighbors": [
+                {
+                    "rssi": -39,
+                    "numRx": 2,
+                    "neighborId": 11
+                },
+                {
+                    "rssi": -76,
+                    "numRx": 2,
+                    "neighborId": 13
+                },
+                {
+                    "rssi": -79,
+                    "numRx": 2,
+                    "neighborId": 14
+                },
+                {
+                    "rssi": -81,
+                    "numRx": 2,
+                    "neighborId": 15
+                },
+                {
+                    "rssi": -90,
+                    "numRx": 2,
+                    "neighborId": 16
+                },
+                {
+                    "rssi": -67,
+                    "numRx": 2,
+                    "neighborId": 17
+                },
+                {
+                    "rssi": -85,
+                    "numRx": 2,
+                    "neighborId": 22
+                },
+                {
+                    "rssi": -95,
+                    "numRx": 2,
+                    "neighborId": 26
+                }
+            ],
+            "numJoinParents": 8
+        }
+    },
+    "mac": "00-17-0d-00-00-31-c2-f9",
+    "name": "hr",
+    "datetime": "2018-05-31 06:56:07"
+}
