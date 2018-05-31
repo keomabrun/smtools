@@ -2,7 +2,6 @@
 
 import json
 from datetime import datetime
-import copy
 
 # =========================== define ==========================================
 
@@ -10,6 +9,8 @@ LOG_FILE  = "sm.log"
 
 SLOFRAME_LENGTH = 256.0                     # has to be float
 SLOT_DURATION_s = 0.00725
+
+PATH_DIR_UP = 0x02
 
 LINK_FLAG_RX = 0x02
 LINK_FLAG_ADVERTISEMENT = 0x20
@@ -117,12 +118,7 @@ def main():
       * Advertisement Cells (considered Tx)
     """
     # count TxData, RxDataTxAck and TxDataRxAckNone
-    prev_datetime = None
     for hr in hrs:
-        if prev_datetime is None:
-            prev_datetime = hr['datetime']
-            continue
-
         if "Neighbors" in hr['hr']:
             # increment counters
             for ngbr in hr['hr']["Neighbors"]["neighbors"]:
@@ -191,6 +187,31 @@ def main():
         else:
             mote['WARNING'] = "The mote did not send messages"
 
+    # compare with HRDevice charge
+    prev_datetime = None
+    for hr in hrs:
+        if prev_datetime is None:
+            prev_datetime = hr['datetime']
+            continue
+
+        if "Device" in hr['hr']:
+            # increment counters
+            motes[hr['mac']]['total_charge_mC'] = hr['hr']["Device"]['charge']
+    # calculate lifetime
+    for mac, mote in motes.iteritems():
+        time_delta = datetime.strptime(motes[mac]['last_datetime'], "%Y-%m-%d %H:%M:%S") - \
+                     datetime.strptime(motes[mac]['sync_datetime'], "%Y-%m-%d %H:%M:%S")
+
+        if mote['total_charge_mC'] > 0:
+            ave_current_mA = mote['total_charge_mC'] / float(time_delta.seconds)
+            lifetime = (BATTERY_AA_CAPACITY_mAh / float(ave_current_mA)) / (24.0 * 365)
+
+            mote.update({
+                'ave_current_uA_hr': ave_current_mA * 1000,
+                'lifetime_AA_years_hr': lifetime,
+
+            })
+
     # ===== LATENCY
 
     """
@@ -220,11 +241,35 @@ def main():
         mote['latency_max_s'] = max(mote['latencies'])
         del mote['latencies']
 
-    # ===== LATENCY
-
+    # ===== TOPOLOGY
+    first_datetime = None
     with open("topology.json", 'w') as f:
         for snap in snapshots:
-            f.write(json.dumps(snap['snapshot']["getPathInfo"]) + '\n')
+            # save first datetime
+            if first_datetime is None:
+                first_datetime = datetime.strptime(snap['datetime'], "%Y-%m-%d %H:%M:%S")
+            time_delta = datetime.strptime(snap['datetime'], "%Y-%m-%d %H:%M:%S") - first_datetime
+
+            # create mac mapping to replace mac by ids
+            mac_map = {mac: i for i, mac in enumerate(motes)}
+            mac_map.update({manager['macAddress']: 0})
+
+            # create topology
+            path_dict = {}
+            for mac, paths in snap['snapshot']["getPathInfo"].iteritems():
+                mote_id = mac_map[mac]
+                for path in paths.values():
+                    if path['direction'] == PATH_DIR_UP:
+                        path['dest'] = mac_map[path['dest']]
+                        # save parent with highest quality
+                        if mote_id not in path_dict or path_dict[mote_id]['quality'] > path['quality']:
+                            path_dict[mote_id] = path
+            topology = json.dumps({
+                'paths': path_dict,
+                'asn': int(time_delta.seconds / SLOT_DURATION_s)
+            })
+
+            f.write(topology + '\n')
 
     # =========================================================================
 
