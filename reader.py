@@ -1,7 +1,7 @@
 # =========================== imports =========================================
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # =========================== define ==========================================
 
@@ -69,7 +69,10 @@ def main():
             'total_RxDataTxAck': 0,
             'total_TxDataRxAckNone': 0,
             'total_TxDataAdv': 0,
-            'create_datetime': event['datetime']
+            'total_charge_mC': 0,
+            'create_datetime': event['datetime'],
+            'macAddress': event['fields']['macAddress'],
+            'moteId': event['fields']['moteId'],
         }
 
     # save join time
@@ -225,11 +228,11 @@ def main():
 
             if line['name'] == 'oap':
                 secs, usec = line["fields"]["packet_timestamp"]
-                relative_time = datetime.fromtimestamp(secs)
+                relative_time = datetime.fromtimestamp(secs) + timedelta(microseconds=usec)
                 tx_time = relative_time + time_delta
-                rx_time = datetime.strptime(line["fields"]['received_timestamp'][:-3], "%Y-%m-%d %H:%M:%S.%f")
+                rx_time = datetime.strptime(line["fields"]['received_timestamp'], "%Y-%m-%d %H:%M:%S.%f")
                 latency = rx_time - tx_time
-                motes[line['mac']].setdefault('latencies', []).append(latency.seconds)
+                motes[line['mac']].setdefault('latencies', []).append(latency.total_seconds())
             elif line['name'] == 'getTime':
                 absolute_time = datetime.strptime(line["datetime"], "%Y-%m-%d %H:%M:%S")
                 relative_time = datetime.fromtimestamp(line["utcSecs"])
@@ -240,8 +243,28 @@ def main():
         mote['latency_avg_s'] = sum(mote['latencies']) / float(len(mote['latencies']))
         mote['latency_max_s'] = max(mote['latencies'])
         del mote['latencies']
+    # compare with mote config info
+    for snap in snapshots:
+        for mac, info in snap['snapshot']["getMoteInfo"].iteritems():
+            if mac == manager['macAddress']:
+                continue
+            motes[mac]['avgLatency'] = info['avgLatency']
+        #break
+    for mote in motes.itervalues():
+        if abs(mote['avgLatency'] - (mote['latency_avg_s'] * 1000.0)) > 1000:
+            print 'Huge latency difference smip={0} and calculated={1} (ms) for {2}'.format(
+                mote['avgLatency'],
+                mote['latency_avg_s'] * 1000.0,
+                mote['macAddress']
+            )
+            #exit(1)
 
     # ===== TOPOLOGY
+
+    # create mac mapping to replace mac by ids
+    mac_map = {mote['macAddress']: mote['moteId'] - 1 for mote in motes.itervalues()}
+    mac_map.update({manager['macAddress']: 0})
+
     first_datetime = None
     with open("topology.json", 'w') as f:
         for snap in snapshots:
@@ -249,10 +272,6 @@ def main():
             if first_datetime is None:
                 first_datetime = datetime.strptime(snap['datetime'], "%Y-%m-%d %H:%M:%S")
             time_delta = datetime.strptime(snap['datetime'], "%Y-%m-%d %H:%M:%S") - first_datetime
-
-            # create mac mapping to replace mac by ids
-            mac_map = {mac: i for i, mac in enumerate(motes)}
-            mac_map.update({manager['macAddress']: 0})
 
             # create topology
             path_dict = {}
@@ -273,9 +292,12 @@ def main():
 
     # =========================================================================
 
-    print json.dumps(motes, indent=4)
+    kpis = {
+        '0': {mac_map[mac]: mote for mac, mote in motes.iteritems()}
+    }
+    print json.dumps(kpis, indent=4)
     with open("result.kpi", 'w') as f:
-        f.write(json.dumps({'0': motes}, indent=4))
+        f.write(json.dumps(kpis, indent=4))
 
 
 if __name__ == "__main__":
