@@ -2,10 +2,9 @@
 
 import json
 from datetime import datetime, timedelta
+import argparse
 
 # =========================== define ==========================================
-
-LOG_FILE  = "sm.log"
 
 SLOFRAME_LENGTH = 256.0                     # has to be float
 SLOT_DURATION_s = 0.00725
@@ -26,7 +25,7 @@ BATTERY_AA_CAPACITY_mAh                     = 2200
 
 # =========================== main ============================================
 
-def main():
+def main(options):
 
     # init
     snapshots = []
@@ -38,7 +37,7 @@ def main():
     manager = None
 
     # read file
-    with open(LOG_FILE, 'r') as f:
+    with open(options.inputfile, 'r') as f:
         for line in f.readlines():
             line = json.loads(line)
 
@@ -63,6 +62,9 @@ def main():
 
     # create mote dict
     for event in create_events:
+        # ignore manager
+        if event['fields']['moteId'] == 1:
+            continue
         motes[event['fields']['macAddress']] = {
             'total_TxData': 0,
             'total_RxIdle': 0,
@@ -74,6 +76,7 @@ def main():
             'macAddress': event['fields']['macAddress'],
             'moteId': event['fields']['moteId'],
         }
+    print "Found {} motes".format(len(motes))
 
     # save join time
     for event in join_events:
@@ -219,30 +222,37 @@ def main():
 
     """
     Calculate the latency for each packet
-    The relation between relative time and absolute time is updating using getTime notifications
+    The relation between relative time and absolute time is updated using getTime notifications
     """
-    with open(LOG_FILE, 'r') as f:
-        time_delta = None
+    with open(options.inputfile, 'r') as f:
+        time_offset = None
         for line in f.readlines():
             line = json.loads(line)
 
             if line['name'] == 'oap':
+                if time_offset is None: # skip if time offset not known message
+                    continue
                 secs, usec = line["fields"]["packet_timestamp"]
                 relative_time = datetime.fromtimestamp(secs) + timedelta(microseconds=usec)
-                tx_time = relative_time + time_delta
+                tx_time = relative_time + time_offset
                 rx_time = datetime.strptime(line["fields"]['received_timestamp'], "%Y-%m-%d %H:%M:%S.%f")
                 latency = rx_time - tx_time
+                if latency.total_seconds() > 50:
+                    print "Huge latency {0} for mac {1} at {2}".format(
+                        latency.total_seconds(),
+                        line['mac'],
+                        line["fields"]['received_timestamp']
+                    )
                 motes[line['mac']].setdefault('latencies', []).append(latency.total_seconds())
             elif line['name'] == 'getTime':
                 absolute_time = datetime.strptime(line["datetime"], "%Y-%m-%d %H:%M:%S")
-                relative_time = datetime.fromtimestamp(line["utcSecs"])
-                time_delta    = absolute_time - relative_time
+                relative_time = datetime.fromtimestamp(line["utcSecs"]) + timedelta(microseconds=line["utcUsecs"])
+                time_offset    = absolute_time - relative_time
     # calculate min/max/ave
     for mac, mote in motes.iteritems():
         mote['latency_min_s'] = min(mote['latencies'])
         mote['latency_avg_s'] = sum(mote['latencies']) / float(len(mote['latencies']))
         mote['latency_max_s'] = max(mote['latencies'])
-        del mote['latencies']
     # compare with mote config info
     for snap in snapshots:
         for mac, info in snap['snapshot']["getMoteInfo"].iteritems():
@@ -295,10 +305,23 @@ def main():
     kpis = {
         '0': {mac_map[mac]: mote for mac, mote in motes.iteritems()}
     }
-    print json.dumps(kpis, indent=4)
+    #print json.dumps(kpis, indent=4)
     with open("result.kpi", 'w') as f:
         f.write(json.dumps(kpis, indent=4))
 
 
-if __name__ == "__main__":
-    main()
+def parse_args():
+    # parse options
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-i', '--inputfile',
+        help       = 'The simulation result folder.',
+        default    = 'sm.log',
+    )
+    return parser.parse_args()
+
+if __name__ == '__main__':
+
+    options = parse_args()
+
+    main(options)
